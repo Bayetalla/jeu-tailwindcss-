@@ -1,0 +1,6 @@
+{
+  "name": "CSS Quest",
+  "description": "Jeu moderne et interactif pour maîtriser CSS de zéro à expert grâce à des missions pratiques, des schémas animés et un assistant vocal en français.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
