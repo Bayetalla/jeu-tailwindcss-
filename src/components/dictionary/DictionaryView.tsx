@@ -26,28 +26,32 @@ export const DictionaryView: React.FC = () => {
   };
 
   const handleSpeak = (entry: DictionaryEntry) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window) || !window.speechSynthesis) return;
 
-    if (speakingProp === entry.propertyName) {
+      if (speakingProp === entry.propertyName) {
+        window.speechSynthesis.cancel();
+        setSpeakingProp(null);
+        return;
+      }
+
       window.speechSynthesis.cancel();
-      setSpeakingProp(null);
-      return;
+      const narration = `${entry.propertyName}. ${entry.frenchDefinition}. Utilité : ${entry.concreteUtility}. Astuce de mémorisation : ${entry.mnemonicTip}`;
+      const utterance = new SpeechSynthesisUtterance(narration.replace(/[{}`*#_]/g, ' '));
+      utterance.lang = 'fr-FR';
+
+      const voices = window.speechSynthesis.getVoices();
+      const frVoice = voices.find((v) => v.lang.startsWith('fr'));
+      if (frVoice) utterance.voice = frVoice;
+
+      utterance.onstart = () => setSpeakingProp(entry.propertyName);
+      utterance.onend = () => setSpeakingProp(null);
+      utterance.onerror = () => setSpeakingProp(null);
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis unavailable:', e);
     }
-
-    window.speechSynthesis.cancel();
-    const narration = `${entry.propertyName}. ${entry.frenchDefinition}. Utilité : ${entry.concreteUtility}. Astuce de mémorisation : ${entry.mnemonicTip}`;
-    const utterance = new SpeechSynthesisUtterance(narration.replace(/[{}`*#_]/g, ' '));
-    utterance.lang = 'fr-FR';
-
-    const voices = window.speechSynthesis.getVoices();
-    const frVoice = voices.find((v) => v.lang.startsWith('fr'));
-    if (frVoice) utterance.voice = frVoice;
-
-    utterance.onstart = () => setSpeakingProp(entry.propertyName);
-    utterance.onend = () => setSpeakingProp(null);
-    utterance.onerror = () => setSpeakingProp(null);
-
-    window.speechSynthesis.speak(utterance);
   };
 
   const filteredEntries = useMemo(() => {

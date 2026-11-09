@@ -92,42 +92,78 @@ export const INITIAL_PROGRESS: UserProgress = {
 
 export const loadUserProgress = (): UserProgress => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    let raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      // Try migrating from legacy key if present
+      raw = localStorage.getItem('tailwind_quest_progress_v1');
+    }
     if (!raw) {
       saveUserProgress(INITIAL_PROGRESS);
       return INITIAL_PROGRESS;
     }
-    const parsed: UserProgress = JSON.parse(raw);
-    const today = getTodayString();
-
-    // Check streak
-    if (parsed.lastActiveDate !== today) {
-      const lastDate = new Date(parsed.lastActiveDate);
-      const currentDate = new Date(today);
-      const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-      if (diffDays === 1) {
-        parsed.streakDays += 1;
-      } else if (diffDays > 1) {
-        parsed.streakDays = 1;
-      }
-      parsed.lastActiveDate = today;
-      parsed.dailyXpEarned = 0; // reset daily XP on a new day
-      saveUserProgress(parsed);
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      saveUserProgress(INITIAL_PROGRESS);
+      return INITIAL_PROGRESS;
     }
 
-    parsed.levelRank = calculateRank(parsed.xp);
-    return parsed;
+    const today = getTodayString();
+    let streak = typeof parsed.streakDays === 'number' && !isNaN(parsed.streakDays) ? parsed.streakDays : 1;
+    let dailyXp = typeof parsed.dailyXpEarned === 'number' && !isNaN(parsed.dailyXpEarned) ? parsed.dailyXpEarned : 0;
+
+    // Check streak safely
+    if (parsed.lastActiveDate && typeof parsed.lastActiveDate === 'string') {
+      if (parsed.lastActiveDate !== today) {
+        const lastDate = new Date(parsed.lastActiveDate);
+        const currentDate = new Date(today);
+        if (!isNaN(lastDate.getTime())) {
+          const diffTime = Math.abs(currentDate.getTime() - lastDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 1) {
+            streak += 1;
+          } else if (diffDays > 1) {
+            streak = 1;
+          }
+        }
+        dailyXp = 0;
+      }
+    }
+
+    const currentXp = typeof parsed.xp === 'number' && !isNaN(parsed.xp) ? parsed.xp : 120;
+
+    const safeProgress: UserProgress = {
+      ...INITIAL_PROGRESS,
+      ...parsed,
+      xp: currentXp,
+      levelRank: calculateRank(currentXp),
+      streakDays: streak,
+      lastActiveDate: today,
+      dailyGoalXp: typeof parsed.dailyGoalXp === 'number' && !isNaN(parsed.dailyGoalXp) ? parsed.dailyGoalXp : 100,
+      dailyXpEarned: dailyXp,
+      diagnosticCompleted: Boolean(parsed.diagnosticCompleted),
+      completedLessonIds: Array.isArray(parsed.completedLessonIds) ? parsed.completedLessonIds : ['1-1'],
+      unlockedBadgeIds: Array.isArray(parsed.unlockedBadgeIds) ? parsed.unlockedBadgeIds : ['first_selector'],
+      completedProjectIds: Array.isArray(parsed.completedProjectIds) ? parsed.completedProjectIds : [],
+      currentLessonId: typeof parsed.currentLessonId === 'string' ? parsed.currentLessonId : '1-1',
+      skillsMastery: parsed.skillsMastery && typeof parsed.skillsMastery === 'object' ? parsed.skillsMastery : INITIAL_PROGRESS.skillsMastery,
+      reviewDeck: Array.isArray(parsed.reviewDeck) ? parsed.reviewDeck : INITIAL_PROGRESS.reviewDeck,
+      savedSnippets: Array.isArray(parsed.savedSnippets) ? parsed.savedSnippets : INITIAL_PROGRESS.savedSnippets,
+    };
+
+    saveUserProgress(safeProgress);
+    return safeProgress;
   } catch (err) {
     console.error('Erreur chargement progression:', err);
+    saveUserProgress(INITIAL_PROGRESS);
     return INITIAL_PROGRESS;
   }
 };
 
 export const saveUserProgress = (progress: UserProgress): void => {
   try {
-    progress.levelRank = calculateRank(progress.xp);
+    if (!progress || typeof progress !== 'object') return;
+    progress.levelRank = calculateRank(progress.xp || 0);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
   } catch (err) {
     console.error('Erreur sauvegarde progression:', err);

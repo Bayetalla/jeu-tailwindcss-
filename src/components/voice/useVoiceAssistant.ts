@@ -32,40 +32,66 @@ export const useVoiceAssistant = (options?: {
   const synthRef = useRef<SpeechSynthesis | null>(null);
   const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Check browser API support
-  const hasSpeechSynthesis = typeof window !== 'undefined' && 'speechSynthesis' in window;
-  const hasSpeechRecognition =
-    typeof window !== 'undefined' &&
-    ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window);
+  // Check browser API support safely without throwing in sandboxed iframes
+  const checkSpeechSynthesis = (): boolean => {
+    try {
+      return typeof window !== 'undefined' && 'speechSynthesis' in window && !!window.speechSynthesis;
+    } catch {
+      return false;
+    }
+  };
+
+  const checkSpeechRecognition = (): boolean => {
+    try {
+      return (
+        typeof window !== 'undefined' &&
+        ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  const hasSpeechSynthesis = checkSpeechSynthesis();
+  const hasSpeechRecognition = checkSpeechRecognition();
 
   // Initialize SpeechSynthesis
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      synthRef.current = window.speechSynthesis;
+    try {
+      if (checkSpeechSynthesis()) {
+        synthRef.current = window.speechSynthesis;
+      }
+    } catch (err) {
+      console.warn('SpeechSynthesis unavailable in current frame:', err);
     }
   }, []);
 
   // Speak text in French
   const speakText = useCallback(
     (text: string) => {
-      if (!synthRef.current) return;
+      try {
+        if (!synthRef.current) return;
 
-      // Stop any current utterance
-      synthRef.current.cancel();
-      setIsPaused(false);
+        // Stop any current utterance
+        synthRef.current.cancel();
+        setIsPaused(false);
 
-      const cleanText = text.replace(/[{}`*#_]/g, ' ');
-      const utterance = new SpeechSynthesisUtterance(cleanText);
-      utterance.lang = 'fr-FR';
-      utterance.rate = speechRate;
-      utterance.pitch = 1.0;
+        const cleanText = text.replace(/[{}`*#_]/g, ' ');
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        utterance.lang = 'fr-FR';
+        utterance.rate = speechRate;
+        utterance.pitch = 1.0;
 
-      // Try selecting a French voice if available
-      const voices = synthRef.current.getVoices();
-      const frenchVoice = voices.find((v) => v.lang.startsWith('fr'));
-      if (frenchVoice) {
-        utterance.voice = frenchVoice;
-      }
+        // Try selecting a French voice if available
+        try {
+          const voices = synthRef.current.getVoices();
+          const frenchVoice = voices.find((v) => v.lang.startsWith('fr'));
+          if (frenchVoice) {
+            utterance.voice = frenchVoice;
+          }
+        } catch {
+          // ignore voice selection failure
+        }
 
       utterance.onstart = () => {
         setIsSpeaking(true);
@@ -80,8 +106,11 @@ export const useVoiceAssistant = (options?: {
         setIsPaused(false);
       };
 
-      currentUtteranceRef.current = utterance;
-      synthRef.current.speak(utterance);
+        currentUtteranceRef.current = utterance;
+        synthRef.current.speak(utterance);
+      } catch (err) {
+        console.warn('Speech synthesis error:', err);
+      }
     },
     [speechRate]
   );

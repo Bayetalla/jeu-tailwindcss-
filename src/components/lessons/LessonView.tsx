@@ -58,29 +58,33 @@ export const LessonView: React.FC<LessonViewProps> = ({
 
   // TTS helper in French
   const speakFrench = (text: string, sectionKey: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    try {
+      if (typeof window === 'undefined' || !('speechSynthesis' in window) || !window.speechSynthesis) return;
 
-    if (isSpeakingSection === sectionKey) {
+      if (isSpeakingSection === sectionKey) {
+        window.speechSynthesis.cancel();
+        setIsSpeakingSection(null);
+        return;
+      }
+
       window.speechSynthesis.cancel();
-      setIsSpeakingSection(null);
-      return;
+      const cleanText = text.replace(/[{}`*#]/g, ' ');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'fr-FR';
+      utterance.rate = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const frVoice = voices.find((v) => v.lang.startsWith('fr'));
+      if (frVoice) utterance.voice = frVoice;
+
+      utterance.onstart = () => setIsSpeakingSection(sectionKey);
+      utterance.onend = () => setIsSpeakingSection(null);
+      utterance.onerror = () => setIsSpeakingSection(null);
+
+      window.speechSynthesis.speak(utterance);
+    } catch (e) {
+      console.warn('Speech synthesis unavailable:', e);
     }
-
-    window.speechSynthesis.cancel();
-    const cleanText = text.replace(/[{}`*#]/g, ' ');
-    const utterance = new SpeechSynthesisUtterance(cleanText);
-    utterance.lang = 'fr-FR';
-    utterance.rate = 1.0;
-
-    const voices = window.speechSynthesis.getVoices();
-    const frVoice = voices.find((v) => v.lang.startsWith('fr'));
-    if (frVoice) utterance.voice = frVoice;
-
-    utterance.onstart = () => setIsSpeakingSection(sectionKey);
-    utterance.onend = () => setIsSpeakingSection(null);
-    utterance.onerror = () => setIsSpeakingSection(null);
-
-    window.speechSynthesis.speak(utterance);
   };
 
   // Handle Quiz Submission

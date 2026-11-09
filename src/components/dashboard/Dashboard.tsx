@@ -45,11 +45,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Find active lesson
   const allLessons = CURRICULUM_LEVELS.flatMap((lvl) => lvl.lessons);
   const currentLesson =
-    allLessons.find((l) => l.id === progress.currentLessonId) || allLessons[0];
+    allLessons.find((l) => l.id === progress?.currentLessonId) || allLessons[0] || {
+      id: '1-1',
+      title: 'Introduction CSS',
+      shortDescription: 'Démarrez votre quête CSS',
+    };
+
+  const completedLessonIds = Array.isArray(progress?.completedLessonIds) ? progress.completedLessonIds : [];
+  const unlockedBadgeIds = Array.isArray(progress?.unlockedBadgeIds) ? progress.unlockedBadgeIds : [];
 
   const totalLessonsCount = allLessons.length;
-  const completedCount = progress.completedLessonIds.length;
-  const overallPercent = Math.min(100, Math.round((completedCount / totalLessonsCount) * 100));
+  const completedCount = completedLessonIds.length;
+  const overallPercent = totalLessonsCount > 0 ? Math.min(100, Math.round((completedCount / totalLessonsCount) * 100)) : 0;
 
   // Diagnostic questions
   const diagnosticQuestions = [
@@ -235,7 +242,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-2.5">
           {CURRICULUM_LEVELS.map((w) => {
             const completedInWorld = w.lessons.filter((l) =>
-              progress.completedLessonIds.includes(l.id)
+              completedLessonIds.includes(l.id)
             ).length;
             const isDone = completedInWorld === w.lessons.length && w.lessons.length > 0;
 
@@ -307,13 +314,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <span>Badges de Maîtrise CSS</span>
             </h3>
             <span className="text-[11px] font-mono text-slate-400">
-              {progress.unlockedBadgeIds.length} / {BADGES.length} débloqués
+              {unlockedBadgeIds.length} / {BADGES.length} débloqués
             </span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
             {BADGES.slice(0, 6).map((badge) => {
-              const unlocked = progress.unlockedBadgeIds.includes(badge.id);
+              const unlocked = unlockedBadgeIds.includes(badge.id);
 
               return (
                 <div

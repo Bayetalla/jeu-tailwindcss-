@@ -35,6 +35,8 @@ export const CurriculumExplorer: React.FC<CurriculumExplorerProps> = ({
 }) => {
   const [selectedWorldId, setSelectedWorldId] = useState<number>(1);
 
+  const completedLessonIds = Array.isArray(progress?.completedLessonIds) ? progress.completedLessonIds : [];
+
   const selectedWorld: Level =
     CURRICULUM_LEVELS.find((lvl) => lvl.id === selectedWorldId) || CURRICULUM_LEVELS[0];
 
@@ -89,7 +91,7 @@ export const CurriculumExplorer: React.FC<CurriculumExplorerProps> = ({
         {CURRICULUM_LEVELS.map((world) => {
           const isSelected = world.id === selectedWorldId;
           const completedCount = world.lessons.filter((l) =>
-            progress.completedLessonIds.includes(l.id)
+            completedLessonIds.includes(l.id)
           ).length;
           const isWorldCompleted = completedCount === world.lessons.length && world.lessons.length > 0;
 
@@ -148,7 +150,7 @@ export const CurriculumExplorer: React.FC<CurriculumExplorerProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
             {selectedWorld.lessons.map((lesson, idx) => {
-              const isDone = progress.completedLessonIds.includes(lesson.id);
+              const isDone = completedLessonIds.includes(lesson.id);
 
               return (
                 <div

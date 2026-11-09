@@ -93,11 +93,18 @@ Message de l'élève :
     const reply = response.text || "Désolé, je n'ai pas pu formuler de réponse. Réessayez !";
     return res.json({ reply, isFallback: false });
   } catch (error: any) {
-    console.error('Error querying Gemini API:', error);
-    return res.status(500).json({
-      error: "Erreur lors de la communication avec le professeur d'IA.",
-      details: error?.message || String(error),
-      fallbackReply: "Astuce CSS Quest : Pensez toujours mobile-first et utilisez 'box-sizing: border-box' pour des calculs de largeur fiables !",
+    console.warn('Gemini API call failed, falling back to local tutor rules:', error?.message);
+    let fallbackReply = "Astuce CSS Quest : Pensez toujours mobile-first et utilisez 'box-sizing: border-box' pour des calculs de largeur fiables !";
+    if (action === 'hint') {
+      fallbackReply = "Indice : Observez le conteneur parent. Avez-vous pensé à déclarer 'display: flex' ou 'display: grid' avant d'utiliser gap ou justify-content ?";
+    } else if (action === 'beginner') {
+      fallbackReply = "Le CSS fonctionne comme l'agencement et la décoration d'une maison : le HTML pose les murs, et le CSS choisit les couleurs et dispose les éléments harmonieusement !";
+    } else if (action === 'explain' || action === 'explain_code') {
+      fallbackReply = "En CSS moderne, chaque élément HTML est une boîte. Avec 'box-sizing: border-box', la largeur déclarée inclut padding et bordures sans débordement imprévu.";
+    }
+    return res.json({
+      reply: fallbackReply,
+      isFallback: true,
     });
   }
 });

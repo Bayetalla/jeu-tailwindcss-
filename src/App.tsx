@@ -133,12 +133,14 @@ export default function App() {
       </main>
 
       {/* Intelligent Voice Professor Modal */}
-      <VoiceProfessorModal
-        isOpen={isVoiceModalOpen}
-        onClose={() => setIsVoiceModalOpen(false)}
-        currentLessonTitle={currentTab === 'lesson' ? currentLesson?.title : undefined}
-        currentCode={currentTab === 'lesson' ? currentLesson?.syntaxExample : undefined}
-      />
+      {isVoiceModalOpen && (
+        <VoiceProfessorModal
+          isOpen={isVoiceModalOpen}
+          onClose={() => setIsVoiceModalOpen(false)}
+          currentLessonTitle={currentTab === 'lesson' ? currentLesson?.title : undefined}
+          currentCode={currentTab === 'lesson' ? currentLesson?.syntaxExample : undefined}
+        />
+      )}
 
       {/* Quiet Professional Footer */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/80 py-8 px-6 text-xs text-slate-500">
